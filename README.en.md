@@ -72,6 +72,7 @@ Live burning is experimental. Use only expendable test media.
 - **CD support**: Supports any CD. Export WAV audio tracks with format headers and accompanying CUE files, compatible with burning software such as cdrecord and ImgBurn; RAW audio track export is also available. See [CD burning compatibility](docs/CD_AUDIO_COMPATIBILITY.md).
 - **DVD support**: Supports any DVD. Export ISO images.
 - **Blu-ray support**: Supports any single-layer 25 GB BD-R, with drawing-only mode and UDF 2.01 files. See [ADDING_BLURAY.md](docs/ADDING_BLURAY.md).
+- **Mixtape CD (music + art)**: `cd-mixtape` burns your songs as normal audio tracks on the inner ring and the image on the outer ring. See [MIXTAPE.md](docs/MIXTAPE.md).
 - **Files on disc**: For CD, DVD, and Blu-ray, select a folder and place its files on the inner or outer ring directly from the Design page, or adjust these options on the Export page. The settings are saved with the project.
 - **File region preview**: Hybrid-disc design projections and artifact readback highlight the file region, including the file system, in blue.
 - **Media grayscale schemes**: CD and DVD both use two black-and-white levels: `0D / AA` for CD and `A5 / 92` in the DVD scrambled domain. See [PHYSICAL_MODEL_AUDIT.md](docs/PHYSICAL_MODEL_AUDIT.md).
@@ -142,6 +143,7 @@ The CLI reads PNG, JPEG, BMP and GIF, using the first frame of animated images. 
 | `simulate` | Simulate readback of a generated DVD ISO using measured radii |
 | `selftest` | Run deterministic regression self-tests for the DVD engine |
 | `cd-generate` | Generate WAV + CUE / RAW audio tracks when no files are included on the disc; generate a CD data disc ISO when `--data-dir` is specified |
+| `cd-mixtape` | Songs as playable audio tracks on the inner ring + disc art on the outer ring, with a multi-track CUE and preview PNG ([guide](docs/MIXTAPE.md)) |
 | `cd-preview-warp` | Calibration projection: project the CD source image using measured geometry |
 | `cd-preview-track` | Render an existing WAV or RAW CD-DA audio track using calibrated geometry (readback simulation) |
 | `bd-generate` | Generate a complete BD-R ISO and write an `<iso>.json` sidecar |

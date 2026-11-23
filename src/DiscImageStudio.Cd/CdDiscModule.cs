@@ -68,6 +68,22 @@ public sealed class CdDiscModule : IOpticalDiscModule
                     .. ToneOptions,
                 ]),
             new DiscCommandDescriptor(
+                "cd-mixtape",
+                "Generate mixtape audio CD with disc art",
+                "Writes your songs as normal CD audio tracks on the inner ring, then a picture track that draws the image on the outer ring, plus a multi-track CUE.",
+                DiscModuleCapabilities.RawTrackGeneration,
+                [
+                    new("input", "Source image", DiscOptionValueType.InputFile, Required: true),
+                    new("music-dir", "Folder of 44.1 kHz 16-bit stereo WAV songs, burned in file-name order", DiscOptionValueType.InputFolder, Required: true),
+                    new("output-dir", "Folder for the track WAVs, mixtape.cue and preview", DiscOptionValueType.String, Required: true),
+                    new("gap", "Silence after each song", DiscOptionValueType.Decimal, DefaultValue: "0", Unit: "seconds"),
+                    new("title", "Album title (CUE/CD-Text)", DiscOptionValueType.String, DefaultValue: "Mixtape"),
+                    new("performer", "Album artist (CUE/CD-Text)", DiscOptionValueType.String, DefaultValue: ""),
+                    .. GeometryOptions,
+                    new("interleave", "CD-DA delay interleave", DiscOptionValueType.Boolean, DefaultValue: "true"),
+                    .. ToneOptions,
+                ]),
+            new DiscCommandDescriptor(
                 "cd-preview-warp",
                 "Preview CD geometry",
                 "Projects generated geometry onto measured disc geometry.",
@@ -112,6 +128,7 @@ public sealed class CdDiscModule : IOpticalDiscModule
         DiscJobResult result = request.Command switch
         {
             "cd-generate" => Generate(request, options, progress, cancellationToken),
+            "cd-mixtape" => Mixtape(request, options, progress, cancellationToken),
             "cd-preview-warp" => PreviewWarp(request, options, progress, cancellationToken),
             "cd-preview-track" => PreviewTrack(request, options, progress, cancellationToken),
             _ => throw new ArgumentException(
@@ -139,6 +156,35 @@ public sealed class CdDiscModule : IOpticalDiscModule
             ReadFilePosition(options));
         DiscImageResult result = CdImageGenerator.Generate(image, progress, cancellationToken);
         return new DiscJobResult(ModuleId, request.Command, 0, result.Summary, result.OutputPath);
+    }
+
+    private static DiscJobResult Mixtape(
+        DiscJobRequest request,
+        CdCommandOptions options,
+        IProgress<DiscJobProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        CdMixtapeRequest mixtape = new(
+            options.Require("input"),
+            options.Require("music-dir"),
+            options.Require("output-dir"),
+            ReadParameters(options),
+            ReadTone(options),
+            options.GetBoolean("interleave", true),
+            options.GetDouble("gap", 0),
+            options.GetString("title", "Mixtape"),
+            options.GetString("performer", string.Empty));
+        CdMixtapeSummary summary = CdMixtapeGenerator.Generate(mixtape,
+            value => progress?.Report(new DiscJobProgress(ModuleId, "generate",
+                $"Disc art progress {value.Fraction:P1}", value.Fraction, value.CompletedBytes,
+                value.TotalBytes, value.Elapsed)), cancellationToken);
+        static string Minutes(long sectors) => TimeSpan.FromSeconds(sectors / 75.0).ToString(@"mm\:ss");
+        string message =
+            $"Mixtape complete: {summary.MusicTracks.Count} songs ({Minutes(summary.MusicSectors)}), "
+            + $"disc art track {summary.MusicTracks.Count + 1} ({Minutes(summary.PictureSectors)}). "
+            + $"Artwork visible from {summary.MusicOuterRadiusMm:F1} mm to {summary.PictureOuterRadiusMm:F1} mm. "
+            + $"cue={summary.CueSheetPath}, preview={summary.PreviewPath}";
+        return new DiscJobResult(ModuleId, request.Command, 0, message, summary.CueSheetPath);
     }
 
     private static DiscJobResult PreviewWarp(
