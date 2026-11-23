@@ -86,6 +86,21 @@ public sealed class CdDiscModule : IOpticalDiscModule
                     .. ToneOptions,
                 ]),
             new DiscCommandDescriptor(
+                "cd-mp3",
+                "Generate MP3 data CD with full-disc art",
+                "Puts your MP3 files (copied as-is, in file-name order) in a thin band at the outer edge and draws the image over the rest of the disc. Writes an .iso to burn as a data CD.",
+                DiscModuleCapabilities.DataImageGeneration,
+                [
+                    new("input", "Source image", DiscOptionValueType.InputFile, Required: true),
+                    new("music-dir", "Folder of MP3 files, burned in file-name order", DiscOptionValueType.InputFolder, Required: true),
+                    new("output-dir", "Folder for the .iso and preview", DiscOptionValueType.String, Required: true),
+                    new("disc", "Blank disc type (sets geometry; r0/r1/sectors override it)", DiscOptionValueType.Choice, DefaultValue: "verbatim-azo",
+                        Choices: ["verbatim-azo", "cd-80", "cd-74"]),
+                    new("title", "Album title (disc name)", DiscOptionValueType.String, DefaultValue: "Mixtape"),
+                    .. GeometryOptions,
+                    .. ToneOptions,
+                ]),
+            new DiscCommandDescriptor(
                 "cd-preview-warp",
                 "Preview CD geometry",
                 "Projects generated geometry onto measured disc geometry.",
@@ -131,6 +146,7 @@ public sealed class CdDiscModule : IOpticalDiscModule
         {
             "cd-generate" => Generate(request, options, progress, cancellationToken),
             "cd-mixtape" => Mixtape(request, options, progress, cancellationToken),
+            "cd-mp3" => Mp3Disc(request, options, progress, cancellationToken),
             "cd-preview-warp" => PreviewWarp(request, options, progress, cancellationToken),
             "cd-preview-track" => PreviewTrack(request, options, progress, cancellationToken),
             _ => throw new ArgumentException(
@@ -187,6 +203,26 @@ public sealed class CdDiscModule : IOpticalDiscModule
             + $"Artwork visible from {summary.MusicOuterRadiusMm:F1} mm to {summary.PictureOuterRadiusMm:F1} mm. "
             + $"cue={summary.CueSheetPath}, preview={summary.PreviewPath}";
         return new DiscJobResult(ModuleId, request.Command, 0, message, summary.CueSheetPath);
+    }
+
+    private static DiscJobResult Mp3Disc(DiscJobRequest request, CdCommandOptions options,
+        IProgress<DiscJobProgress>? progress, CancellationToken cancellationToken)
+    {
+        string musicDir = Path.GetFullPath(options.Require("music-dir"));
+        CdMixtapeSong[] songs = Directory.EnumerateFiles(musicDir)
+            .Where(f => Path.GetExtension(f).Equals(".mp3", StringComparison.OrdinalIgnoreCase))
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .Select(f => new CdMixtapeSong(f, CdMixtapeGenerator.SongTitle(f))).ToArray();
+        if (songs.Length == 0) throw new ArgumentException($"No .mp3 files in {musicDir}.");
+        CdMp3DiscSummary summary = CdMp3DiscGenerator.Generate(new CdMp3DiscRequest(options.Require("input"), songs,
+            options.Require("output-dir"), ReadParameters(options, DiscPreset(options.GetString("disc", "verbatim-azo"))),
+            ReadTone(options), options.GetString("title", "Mixtape")),
+            value => progress?.Report(new DiscJobProgress(ModuleId, "generate", $"Disc progress {value.Fraction:P1}",
+                value.Fraction, value.CompletedBytes, value.TotalBytes, value.Elapsed)), cancellationToken);
+        string message = $"MP3 disc complete: {summary.SongCount} songs ({summary.FileBytes / 1048576.0:F0} MB). "
+            + $"Art from the hub out to {summary.FilesStartRadiusMm:F1} mm; songs in the band to {summary.DiscOuterRadiusMm:F1} mm. "
+            + $"iso={summary.IsoPath}, preview={summary.PreviewPath}";
+        return new DiscJobResult(ModuleId, request.Command, 0, message, summary.IsoPath);
     }
 
     private static CdDiscParameters DiscPreset(string name) => CdMixtapeGenerator.DiscParameters(name);

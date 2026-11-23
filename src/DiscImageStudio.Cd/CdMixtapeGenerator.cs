@@ -188,7 +188,8 @@ public static class CdMixtapeGenerator
     public static byte[] RenderDiscPreview(string sourceImage, CdDiscParameters parameters, ToneProfile tone,
         long musicSectors, int size, CancellationToken cancellationToken = default)
         => CdDiscRenderer.Render(sourceImage, parameters, tone.Normalized(),
-            Math.Clamp(musicSectors, 0, parameters.OutputSectors) * CdDiscParameters.BytesPerSector, size, cancellationToken);
+            Math.Clamp(musicSectors, 0, parameters.OutputSectors) * CdDiscParameters.BytesPerSector,
+            parameters.TotalBytes, size, cancellationToken);
 
     /// <summary>Radius (mm) where the music ends and the picture begins.</summary>
     public static double PictureStartRadiusMm(CdDiscParameters parameters, long musicSectors)

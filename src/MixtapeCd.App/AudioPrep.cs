@@ -34,6 +34,32 @@ internal static class AudioPrep
         return null;
     }
 
+    /// <summary>MP3 for an MP3 disc: the file itself, or a 320 kbps conversion of other formats.</summary>
+    internal static async Task<string> PrepareMp3Async(string source, CancellationToken cancellationToken)
+    {
+        if (Path.GetExtension(source).Equals(".mp3", StringComparison.OrdinalIgnoreCase)) return source;
+        return await ConvertAsync(source, ".mp3", ["-c:a", "libmp3lame", "-b:a", "320k", "-ar", "44100", "-f", "mp3"],
+            cancellationToken);
+    }
+
+    /// <summary>Song length from ffmpeg's header read; 0 when ffmpeg isn't available.</summary>
+    internal static async Task<double> ProbeSecondsAsync(string source, CancellationToken cancellationToken)
+    {
+        string? ffmpeg = FindFfmpeg();
+        if (ffmpeg is null) return 0;
+        ProcessStartInfo start = new(ffmpeg) { RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
+        foreach (string arg in new[] { "-hide_banner", "-nostdin", "-i", source }) start.ArgumentList.Add(arg);
+        using Process process = Process.Start(start)!;
+        string text = await process.StandardError.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken);
+        System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(text,
+            @"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)");
+        return m.Success
+            ? int.Parse(m.Groups[1].Value) * 3600 + int.Parse(m.Groups[2].Value) * 60
+              + double.Parse(m.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture)
+            : 0;
+    }
+
     /// <summary>Returns a CD-ready WAV for <paramref name="source"/>: the file itself when it already
     /// is one, otherwise a cached ffmpeg conversion.</summary>
     internal static async Task<string> PrepareAsync(string source, CancellationToken cancellationToken)
@@ -48,16 +74,23 @@ internal static class AudioPrep
             catch (InvalidDataException) { }
         }
 
+        return await ConvertAsync(source, ".wav", ["-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", "-f", "wav"],
+            cancellationToken);
+    }
+
+    private static async Task<string> ConvertAsync(string source, string extension, string[] codecArgs,
+        CancellationToken cancellationToken)
+    {
         string ffmpeg = FindFfmpeg() ?? throw new InvalidOperationException(
             "ffmpeg is needed to read this file type. Put ffmpeg.exe next to MixtapeCD.exe or install it.");
         FileInfo info = new(source);
         string key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
             $"{info.FullName}|{info.Length}|{info.LastWriteTimeUtc.Ticks}")))[..24];
         Directory.CreateDirectory(CacheDirectory);
-        string output = Path.Combine(CacheDirectory, key + ".wav");
+        string output = Path.Combine(CacheDirectory, key + extension);
         if (File.Exists(output)) return output;
 
-        string partial = output + ".part.wav";
+        string partial = output + ".part" + extension;
         ProcessStartInfo start = new(ffmpeg)
         {
             RedirectStandardError = true,
@@ -65,8 +98,8 @@ internal static class AudioPrep
             UseShellExecute = false,
             CreateNoWindow = true,
         };
-        foreach (string arg in new[] { "-nostdin", "-loglevel", "error", "-y", "-i", source, "-map", "0:a:0",
-                     "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", "-f", "wav", partial })
+        foreach (string arg in new[] { "-nostdin", "-loglevel", "error", "-y", "-i", source, "-map", "0:a:0" }
+                     .Concat(codecArgs).Append(partial))
             start.ArgumentList.Add(arg);
         using Process process = Process.Start(start) ?? throw new InvalidOperationException("Could not start ffmpeg.");
         Task<string> errors = process.StandardError.ReadToEndAsync(cancellationToken);

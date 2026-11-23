@@ -1,13 +1,26 @@
 # Mixtape CD
 
-Burn a **playable music CD that also has a picture on the burn side**. Your songs go on the
-inner ring as normal audio tracks, and the artwork is drawn on the outer ring by a final
-"disc art" track. Tuned for **Verbatim Silver Inkjet Printable CD-R** (DataLifePlus, AZO dye).
+Burn your mixtape to a CD **with a picture drawn into the burned side**. Tuned for
+**Verbatim Silver Inkjet Printable CD-R** (DataLifePlus, AZO dye).
 
-![What the burned side should look like: 12-track mixtape on a Verbatim AZO CD-R](docs/images/preview-verbatim-12-tracks.png)
+Two kinds of disc:
 
-*Simulated readback of the real generated disc data, drawn on a blue AZO dye surface.
-Real discs show it best tilted under a light, and more subtly than this render.*
+| | **MP3 disc** (default) | **Audio CD** |
+| --- | --- | --- |
+| Art on the burned side | almost the whole disc (~86% for 12 songs) | outer ring only |
+| Songs stored as | your MP3 files, in a thin band at the edge | normal CD tracks in the middle |
+| Plays on | computers, MP3-capable CD players, most car stereos since ~2005 | every CD player |
+| Extra | `playlist.m3u` for the running order | last track is the picture and plays as noise |
+
+![MP3 disc: the art covers the disc, songs in a thin band at the edge](docs/images/preview-mp3-disc.png)
+
+*Simulated from the real generated disc data, drawn on a blue AZO dye surface. Real discs
+show it best tilted under a light, and more subtly than this render.*
+
+**Why can't songs and art share space?** The picture *is* the burned data pattern, so wherever
+song data sits the disc shows plain texture. CD audio is uncompressed (about 10 MB per minute),
+so 43 minutes fills over half the disc. As MP3s (about 2.4 MB per minute at 320 kbps), the same songs
+take roughly 100 MB, a 3–4 mm band at the edge.
 
 ## The app (Windows)
 
@@ -19,17 +32,22 @@ Real discs show it best tilted under a light, and more subtly than this render.*
 2. Install [ImgBurn](https://www.imgburn.com/) (free) for the actual burning.
 3. Run **MixtapeCD.exe** and:
    - **Songs**: drag your tracks in (or *Add songs…*), fix titles, reorder with ▲▼.
+   - **Disc**: *MP3 disc* and Verbatim AZO are preselected. Switch to *Audio CD* if it must play
+     in old CD-only players.
    - **Disc art**: the money art is preselected; *Choose image…* to use another.
-   - **Disc**: Verbatim AZO is preselected for your Verbatim Silver Inkjet Printable CD-Rs.
    - Watch the **preview**: it redraws the burned side whenever you change something,
      and shows how much room the art has. It warns if there's too much music.
-4. **Build disc files**, then **Burn with ImgBurn**. ImgBurn opens with the disc loaded;
-   insert a blank, choose a slow speed and click Write.
+4. **Build disc files**, then **Burn with ImgBurn**. ImgBurn opens with the disc (`.iso` for MP3
+   discs, `mixtape.cue` for audio CDs) loaded; insert a blank, choose a slow speed and click Write.
 
 Windows may show a SmartScreen warning the first time because the app isn't signed:
 *More info → Run anyway*.
 
 ### Command line instead
+
+MP3 disc: `mixtape-cd cd-mp3 --input art/money.png --music-dir ./songs --output-dir ./disc --title "My Mixtape"`
+
+Audio CD:
 
 ```powershell
 .\make-mixtape.ps1 -Songs "D:\Mixtape\songs" -Title "My Mixtape" -Artist "Me"
@@ -37,7 +55,7 @@ Windows may show a SmartScreen warning the first time because the app isn't sign
 (from the **mixtape-cd-cli-win-x64** download; needs ffmpeg on PATH).
 macOS/Linux: `./make-mixtape.sh ./songs`, burn with `cdrdao write disc/mixtape.cue`.
 
-## What fits
+## What fits (audio CD mode)
 
 An 80-minute disc is shared: **more music = thinner art ring.** On the Verbatim disc
 (data area 24.8–58.0 mm):

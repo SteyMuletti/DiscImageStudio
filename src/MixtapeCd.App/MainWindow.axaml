@@ -11,10 +11,33 @@
     <!-- Left: songs, art, disc settings -->
     <ScrollViewer Grid.Column="0" Grid.Row="0" Margin="0,0,16,0">
       <StackPanel Spacing="12">
+        <Border Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Text="1  ·  DISC" Classes="h" Margin="0,0,0,0" />
+            <TextBlock Text="Kind of disc" Foreground="#9aa3c7" FontSize="12" />
+            <ComboBox x:Name="DiscMode" HorizontalAlignment="Stretch" SelectionChanged="OnModeChanged" />
+            <TextBlock x:Name="ModeHint" FontSize="11" Foreground="#7d849f" TextWrapping="Wrap" />
+            <TextBlock Text="Blank disc" Foreground="#9aa3c7" FontSize="12" />
+            <ComboBox x:Name="DiscType" HorizontalAlignment="Stretch" SelectionChanged="OnSettingChanged" />
+            <Grid ColumnDefinitions="*,10,*">
+              <StackPanel>
+                <TextBlock Text="Album title" Foreground="#9aa3c7" FontSize="12" />
+                <TextBox x:Name="AlbumTitle" Text="Mixtape" />
+              </StackPanel>
+              <StackPanel Grid.Column="2">
+                <TextBlock Text="Artist" Foreground="#9aa3c7" FontSize="12" />
+                <TextBox x:Name="Artist" />
+              </StackPanel>
+            </Grid>
+            <TextBlock x:Name="GapLabel" Text="Gap between songs" Foreground="#9aa3c7" FontSize="12" />
+            <ComboBox x:Name="Gap" HorizontalAlignment="Stretch" SelectionChanged="OnSettingChanged" />
+          </StackPanel>
+        </Border>
+
         <Border Classes="card" DragDrop.AllowDrop="True" x:Name="SongsCard">
           <StackPanel>
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="1  ·  SONGS" Classes="h" Margin="0,0,0,8" />
+              <TextBlock Text="2  ·  SONGS" Classes="h" Margin="0,0,0,8" />
               <Button Grid.Column="1" Content="+ Add songs…" Click="OnAddSongs" />
             </Grid>
             <TextBlock x:Name="SongsHint" TextWrapping="Wrap" Foreground="#7d849f" Margin="0,4,0,8"
@@ -46,7 +69,7 @@
 
         <Border Classes="card" DragDrop.AllowDrop="True" x:Name="ArtCard">
           <StackPanel>
-            <TextBlock Text="2  ·  DISC ART" Classes="h" Margin="0,0,0,8" />
+            <TextBlock Text="3  ·  DISC ART" Classes="h" Margin="0,0,0,8" />
             <Grid ColumnDefinitions="96,*">
               <Border Width="88" Height="88" CornerRadius="6" ClipToBounds="True" Background="#000">
                 <Image x:Name="ArtThumb" Stretch="UniformToFill" />
@@ -64,25 +87,6 @@
           </StackPanel>
         </Border>
 
-        <Border Classes="card">
-          <StackPanel Spacing="8">
-            <TextBlock Text="3  ·  DISC" Classes="h" Margin="0,0,0,0" />
-            <TextBlock Text="Blank disc" Foreground="#9aa3c7" FontSize="12" />
-            <ComboBox x:Name="DiscType" HorizontalAlignment="Stretch" SelectionChanged="OnSettingChanged" />
-            <Grid ColumnDefinitions="*,10,*">
-              <StackPanel>
-                <TextBlock Text="Album title" Foreground="#9aa3c7" FontSize="12" />
-                <TextBox x:Name="AlbumTitle" Text="Mixtape" />
-              </StackPanel>
-              <StackPanel Grid.Column="2">
-                <TextBlock Text="Artist" Foreground="#9aa3c7" FontSize="12" />
-                <TextBox x:Name="Artist" />
-              </StackPanel>
-            </Grid>
-            <TextBlock Text="Gap between songs" Foreground="#9aa3c7" FontSize="12" />
-            <ComboBox x:Name="Gap" HorizontalAlignment="Stretch" SelectionChanged="OnSettingChanged" />
-          </StackPanel>
-        </Border>
       </StackPanel>
     </ScrollViewer>
 

@@ -9,14 +9,15 @@ internal static class CdDiscRenderer
     private const double DiscRadiusMm = 60.0, HoleRadiusMm = 7.5, ClearRadiusMm = 22.5;
 
     internal static byte[] Render(string sourceImage, CdDiscParameters parameters, ToneProfile tone,
-        long musicBytes, int size, CancellationToken cancellationToken)
+        long drawStartByte, long drawEndByte, int size, CancellationToken cancellationToken)
     {
         // The engine's own projection of the art, at its native preview scale.
         int warpSize = Math.Clamp(size, 256, 2048);
         byte[] warp = CdTrackGenerator.PreviewWarpPixels(sourceImage, parameters, parameters, warpSize,
-            samplesPerSector: 24, tone, musicBytes, cancellationToken);
+            samplesPerSector: 24, tone, drawStartByte, drawEndByte, cancellationToken);
         double warpMmPerPixel = parameters.PreviewImageOuterRadiusMm / (warpSize / 2.0);
-        double musicOuter = parameters.RadiusFromByte(musicBytes);
+        double drawInner = parameters.RadiusFromByte(drawStartByte);
+        double drawOuter = parameters.RadiusFromByte(Math.Min(drawEndByte, parameters.TotalBytes));
         double dataInner = parameters.InnerRadiusMm, dataOuter = parameters.OutputOuterRadiusMm;
 
         byte[] pixels = new byte[size * size * 4];
@@ -39,7 +40,7 @@ internal static class CdDiscRenderer
                     double level; // 1 = unburned dye, 0 = fully burned
                     if (r < dataInner) level = 1.25; // lead-in mirror band
                     else if (r > dataOuter) level = 1.0;
-                    else if (r < musicOuter) level = 0.5 + 0.07 * Math.Sin(r * 9.0); // audio texture
+                    else if (r < drawInner || r > drawOuter) level = 0.5 + 0.07 * Math.Sin(r * 9.0); // music/file data texture
                     else level = SampleWarp(warp, warpSize, warpMmPerPixel, dx, dy) / 255.0;
                     c = Dye(level);
                     c = Sheen(c, angle, r);
