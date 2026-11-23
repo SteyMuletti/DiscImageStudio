@@ -31,7 +31,9 @@ take roughly 100 MB, a 3–4 mm band at the edge.
    then **build → Run workflow**.) It includes ffmpeg, so MP3/FLAC/M4A just work.
 2. Install [ImgBurn](https://www.imgburn.com/) (free) for the actual burning.
 3. Run **MixtapeCD.exe** and:
-   - **Songs**: drag your tracks in (or *Add songs…*), fix titles, reorder with ▲▼.
+   - **Songs**: drag in any audio files (MP3, WAV, FLAC, M4A/AAC, ALAC, OGG, Opus, AIFF, WMA,
+     even video files) or click *Add songs…*. Titles and artists come from each file's tags; edit
+     them and reorder with ▲▼.
    - **Disc**: *MP3 disc* and Verbatim AZO are preselected. Switch to *Audio CD* if it must play
      in old CD-only players.
    - **Disc art**: the money art is preselected; *Choose image…* to use another.
@@ -54,6 +56,23 @@ Audio CD:
 ```
 (from the **mixtape-cd-cli-win-x64** download; needs ffmpeg on PATH).
 macOS/Linux: `./make-mixtape.sh ./songs`, burn with `cdrdao write disc/mixtape.cue`.
+
+## Sound quality (MP3 disc)
+
+The app converts automatically, picking the path with the least quality loss:
+
+| Your file | What happens |
+| --- | --- |
+| MP3 | used **as-is**, zero loss (re-encoding an MP3 can only make it worse) |
+| Lossless: WAV, FLAC, AIFF, ALAC, APE, WavPack… | encoded once to MP3 **320 kbps** with LAME's highest-quality mode |
+| Other lossy: AAC/M4A, OGG, Opus, WMA… | converted to MP3 **320 kbps** to keep the extra loss as small as possible |
+
+- Sample rates MP3 supports (44.1/48/32 kHz) are kept; hi-res files (88.2/96/192 kHz) are
+  resampled to 44.1 kHz with a high-precision (SoX) resampler. Mono stays mono; surround folds to stereo.
+- Song tags (title, artist) are kept, and track numbers/album are written so car stereos list
+  songs properly. Tagging copies the audio unchanged.
+- Space is not a concern: even 80 minutes at 320 kbps is about 190 MB, a ~6 mm band, leaving ~80%
+  of the disc for the art. The *Sound quality* menu offers V0/192 kbps if you want a thinner band.
 
 ## What fits (audio CD mode)
 

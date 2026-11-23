@@ -35,6 +35,10 @@ public sealed partial class MainWindow : Window
         DiscMode.Items.Add(new ComboBoxItem { Content = "MP3 disc: art covers the whole disc", Tag = true });
         DiscMode.Items.Add(new ComboBoxItem { Content = "Audio CD: art on the outer ring only", Tag = false });
         DiscMode.SelectedIndex = 0;
+        Quality.Items.Add(new ComboBoxItem { Content = "Best: MP3 320 kbps (recommended)", Tag = Mp3Quality.Best320 });
+        Quality.Items.Add(new ComboBoxItem { Content = "Very high: MP3 VBR V0 (~245 kbps, smaller)", Tag = Mp3Quality.VbrV0 });
+        Quality.Items.Add(new ComboBoxItem { Content = "Good: MP3 192 kbps (smallest)", Tag = Mp3Quality.Cbr192 });
+        Quality.SelectedIndex = 0;
         foreach ((string id, string name) in CdMixtapeGenerator.DiscTypes)
             DiscType.Items.Add(new ComboBoxItem { Content = name, Tag = id });
         DiscType.SelectedIndex = 0;
@@ -64,6 +68,38 @@ public sealed partial class MainWindow : Window
 
     private bool Mp3Mode => DiscMode.SelectedItem is ComboBoxItem { Tag: true };
 
+    private Mp3Quality SelectedQuality => Quality.SelectedItem is ComboBoxItem { Tag: Mp3Quality q } ? q : Mp3Quality.Best320;
+
+    private void OnQualityChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (!IsInitialized || DiscMode is null) return;
+        // MP3 songs are unaffected; everything else is re-encoded at the new setting.
+        foreach (Track track in Tracks.Where(t => t.Info is { IsMp3: false } && !t.Failed))
+        {
+            track.Mp3Path = null;
+            _ = PrepareAsync(track);
+        }
+        InvalidateBuild();
+        SchedulePreview();
+    }
+
+    private string Mp3Note(AudioInfo? info)
+    {
+        if (info is null) return "";
+        string source = $"{info.FormatName}{(info.IsLossless ? " (lossless)" : "")}"
+            + (info.BitrateKbps > 0 && !info.IsLossless ? $" {info.BitrateKbps} kbps" : "")
+            + (info.SampleRate is not (44100 or 48000 or 32000) ? $" {info.SampleRate / 1000.0:0.#} kHz" : "")
+            + (info.Channels == 1 ? " mono" : info.Channels > 2 ? $" {info.Channels}-ch" : "");
+        if (info.IsMp3) return $"{source} · kept as-is, no quality loss";
+        string target = SelectedQuality switch
+        {
+            Mp3Quality.VbrV0 => "MP3 V0",
+            Mp3Quality.Cbr192 => "MP3 192 kbps",
+            _ => "MP3 320 kbps",
+        };
+        return $"{source} → {target}";
+    }
+
     private bool IsReady(Track t) => !t.Failed && (Mp3Mode ? t.Mp3Path is not null : t.WavPath is not null);
 
     private void OnModeChanged(object? sender, SelectionChangedEventArgs e)
@@ -71,15 +107,23 @@ public sealed partial class MainWindow : Window
         if (!IsInitialized || Gap is null) return;
         UpdateModeUi();
         SetDefaultArt(onlyIfBuiltIn: true);
-        foreach (Track track in Tracks.Where(t => !IsReady(t) && !t.Failed)) _ = PrepareAsync(track);
+        foreach (Track track in Tracks.Where(t => !t.Failed))
+        {
+            if (!IsReady(track)) _ = PrepareAsync(track);
+            else track.Note = mp3Note(track);
+        }
         InvalidateBuild();
         SchedulePreview();
     }
+
+    private string mp3Note(Track track) => Mp3Mode ? Mp3Note(track.Info)
+        : track.Info is { } info ? $"{info.FormatName} → CD audio" : "";
 
     private void UpdateModeUi()
     {
         bool mp3 = Mp3Mode;
         GapLabel.IsVisible = Gap.IsVisible = !mp3;
+        QualityLabel.IsVisible = Quality.IsVisible = mp3;
         ModeHint.Text = mp3
             ? "Songs are stored as MP3 files in a thin band at the edge. Plays on computers and MP3-capable CD players (most car stereos)."
             : "Songs are normal CD tracks and play in any CD player, but they cover the middle of the disc. A last 'art' track plays as noise.";
@@ -133,15 +177,27 @@ public sealed partial class MainWindow : Window
     {
         try
         {
+            if (track.Info is null)
+            {
+                track.Status = "Reading…";
+                track.Info = await Task.Run(() => AudioPrep.ProbeAsync(track.SourcePath, CancellationToken.None));
+                if (track.Info is { Seconds: > 0 } probed) track.Seconds = probed.Seconds;
+                // Prefer the song's own tags over its file name (unless the user already typed one).
+                if (track.Info is { Title.Length: > 0 } tagged && track.Title == CdMixtapeGenerator.SongTitle(track.SourcePath))
+                    track.Title = tagged.Title;
+                if (track.Info is { Artist.Length: > 0 } withArtist && track.Artist.Length == 0)
+                    track.Artist = withArtist.Artist;
+            }
             if (Mp3Mode)
             {
-                bool convert = !Path.GetExtension(track.SourcePath).Equals(".mp3", StringComparison.OrdinalIgnoreCase);
-                track.Status = convert ? "Converting to MP3…" : "Reading…";
-                string mp3 = await Task.Run(() => AudioPrep.PrepareMp3Async(track.SourcePath, CancellationToken.None));
+                Mp3Quality quality = SelectedQuality;
+                if (track.Info is not { IsMp3: true }) track.Status = "Converting to MP3…";
+                string mp3 = await Task.Run(() => AudioPrep.PrepareMp3Async(track.SourcePath, track.Info, quality,
+                    CancellationToken.None));
+                if (quality != SelectedQuality) return; // setting changed meanwhile; a newer job takes over
                 track.FileBytes = new FileInfo(mp3).Length;
-                if (track.Seconds == 0)
-                    track.Seconds = await Task.Run(() => AudioPrep.ProbeSecondsAsync(mp3, CancellationToken.None));
                 track.Mp3Path = mp3;
+                track.Note = Mp3Note(track.Info);
             }
             else
             {
@@ -149,6 +205,7 @@ public sealed partial class MainWindow : Window
                 string wav = await Task.Run(() => AudioPrep.PrepareAsync(track.SourcePath, CancellationToken.None));
                 track.Sectors = CdMixtapeGenerator.SongSectors(wav, GapSeconds);
                 track.WavPath = wav;
+                track.Note = track.Info is { } info ? $"{info.FormatName} → CD audio" : "";
             }
             track.Status = "";
         }
@@ -418,10 +475,30 @@ public sealed partial class MainWindow : Window
                     File.Delete(old);
             if (mp3)
             {
-                CdMp3DiscSummary summary = await Task.Run(() => CdMp3DiscGenerator.Generate(
-                    new CdMp3DiscRequest(art, songs, folder, disc, Tone, title, artist), report));
-                _builtCue = summary.IsoPath;
-                StatusText.Text = $"Ready to burn: MP3 disc with {summary.SongCount} songs. Saved as {summary.IsoPath}";
+                StatusText.Text = "Writing song tags…";
+                string tagged = Path.Combine(Path.GetTempPath(), "MixtapeCD", "tagged-" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(tagged);
+                try
+                {
+                    for (int i = 0; i < songs.Length; i++)
+                    {
+                        string destination = Path.Combine(tagged, $"{i + 1:000}.mp3");
+                        string songArtist = Tracks[i].Artist.Trim();
+                        await AudioPrep.TagMp3Async(songs[i].WavPath, destination, songs[i].Title,
+                            songArtist.Length > 0 ? songArtist : artist, artist, title, i + 1, songs.Length,
+                            CancellationToken.None);
+                        songs[i] = songs[i] with { WavPath = destination };
+                    }
+                    StatusText.Text = "Building the disc…";
+                    CdMp3DiscSummary summary = await Task.Run(() => CdMp3DiscGenerator.Generate(
+                        new CdMp3DiscRequest(art, songs, folder, disc, Tone, title, artist), report));
+                    _builtCue = summary.IsoPath;
+                    StatusText.Text = $"Ready to burn: MP3 disc with {summary.SongCount} songs. Saved as {summary.IsoPath}";
+                }
+                finally
+                {
+                    try { Directory.Delete(tagged, recursive: true); } catch (IOException) { }
+                }
             }
             else
             {

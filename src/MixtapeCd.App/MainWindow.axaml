@@ -17,6 +17,8 @@
             <TextBlock Text="Kind of disc" Foreground="#9aa3c7" FontSize="12" />
             <ComboBox x:Name="DiscMode" HorizontalAlignment="Stretch" SelectionChanged="OnModeChanged" />
             <TextBlock x:Name="ModeHint" FontSize="11" Foreground="#7d849f" TextWrapping="Wrap" />
+            <TextBlock x:Name="QualityLabel" Text="Sound quality for non-MP3 songs" Foreground="#9aa3c7" FontSize="12" />
+            <ComboBox x:Name="Quality" HorizontalAlignment="Stretch" SelectionChanged="OnQualityChanged" />
             <TextBlock Text="Blank disc" Foreground="#9aa3c7" FontSize="12" />
             <ComboBox x:Name="DiscType" HorizontalAlignment="Stretch" SelectionChanged="OnSettingChanged" />
             <Grid ColumnDefinitions="*,10,*">
@@ -25,7 +27,7 @@
                 <TextBox x:Name="AlbumTitle" Text="Mixtape" />
               </StackPanel>
               <StackPanel Grid.Column="2">
-                <TextBlock Text="Artist" Foreground="#9aa3c7" FontSize="12" />
+                <TextBlock Text="Album artist" Foreground="#9aa3c7" FontSize="12" />
                 <TextBox x:Name="Artist" />
               </StackPanel>
             </Grid>
@@ -41,14 +43,19 @@
               <Button Grid.Column="1" Content="+ Add songs…" Click="OnAddSongs" />
             </Grid>
             <TextBlock x:Name="SongsHint" TextWrapping="Wrap" Foreground="#7d849f" Margin="0,4,0,8"
-                       Text="Drop MP3, WAV, FLAC or M4A files here, or click Add songs. They play in this order." />
+                       Text="Drop any audio files here (MP3, WAV, FLAC, M4A, OGG, AIFF, WMA… even videos), or click Add songs. They play in this order." />
             <ItemsControl ItemsSource="{Binding Tracks}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="local:Track">
                   <Grid ColumnDefinitions="28,*,52,Auto" Margin="0,2">
                     <TextBlock Text="{Binding NumberText}" VerticalAlignment="Center" Foreground="#7d849f" />
                     <StackPanel Grid.Column="1">
-                      <TextBox Text="{Binding Title}" Padding="6,3" MinHeight="28" />
+                      <Grid ColumnDefinitions="3*,4,2*">
+                        <TextBox Text="{Binding Title}" Padding="6,3" MinHeight="28" Watermark="Title" />
+                        <TextBox Grid.Column="2" Text="{Binding Artist}" Padding="6,3" MinHeight="28" Watermark="Artist" />
+                      </Grid>
+                      <TextBlock Text="{Binding Note}" FontSize="11" Foreground="#7d849f"
+                                 IsVisible="{Binding HasNote}" Margin="2,2,0,0" TextWrapping="Wrap" />
                       <TextBlock Text="{Binding Status}" FontSize="11" Foreground="#d9a441"
                                  IsVisible="{Binding HasStatus}" Margin="2,2,0,0" TextWrapping="Wrap" />
                     </StackPanel>

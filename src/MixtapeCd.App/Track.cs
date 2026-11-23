@@ -14,6 +14,8 @@ public sealed class Track(string sourcePath, string title) : INotifyPropertyChan
     private string? _mp3Path;
     private long _fileBytes;
     private double _seconds;
+    private string _note = "";
+    private string _artist = "";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -23,6 +25,9 @@ public sealed class Track(string sourcePath, string title) : INotifyPropertyChan
     public string NumberText => $"{Number:00}";
 
     public string Title { get => _title; set { _title = value; Raise(); } }
+
+    /// <summary>The song's own artist (from its tags, editable).</summary>
+    public string Artist { get => _artist; set { _artist = value; Raise(); } }
 
     /// <summary>CD-ready WAV once conversion finished; null while preparing or after a failure.</summary>
     public string? WavPath { get => _wavPath; set { _wavPath = value; Raise(); } }
@@ -45,7 +50,12 @@ public sealed class Track(string sourcePath, string title) : INotifyPropertyChan
     public long FileBytes { get => _fileBytes; set { _fileBytes = value; Raise(); } }
     public double Seconds { get => _seconds; set { _seconds = value; Raise(); Raise(nameof(DurationText)); } }
 
-    public string Status { get => _status; set { _status = value; Raise(); Raise(nameof(HasStatus)); } }
+    /// <summary>Source format and what happens to it, e.g. "FLAC (lossless) → MP3 320 kbps".</summary>
+    public string Note { get => _note; set { _note = value; Raise(); Raise(nameof(HasNote)); } }
+    public bool HasNote => Note.Length > 0 && Status.Length == 0;
+    internal AudioInfo? Info { get; set; }
+
+    public string Status { get => _status; set { _status = value; Raise(); Raise(nameof(HasStatus)); Raise(nameof(HasNote)); } }
     public bool HasStatus => Status.Length > 0;
     public bool Failed => Status.StartsWith("Can't", StringComparison.Ordinal);
 
