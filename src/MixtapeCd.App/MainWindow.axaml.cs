@@ -510,7 +510,8 @@ public sealed partial class MainWindow : Window
                 Directory.CreateDirectory(tagged);
                 try
                 {
-                    for (int i = 0; i < songs.Length; i++)
+                    // Tags need ffmpeg; without it the MP3s go on exactly as they are.
+                    for (int i = 0; i < songs.Length && FindFfmpeg() is not null; i++)
                     {
                         string destination = Path.Combine(tagged, $"{i + 1:000}.mp3");
                         string songArtist = Tracks[i].Artist.Trim();

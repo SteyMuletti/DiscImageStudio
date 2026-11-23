@@ -26,9 +26,9 @@ take roughly 100 MB, a 3–4 mm band at the edge.
 
 ![Mixtape CD app: songs on the left, live preview of the burned disc on the right](docs/images/app.png)
 
-1. Get the app: open this repo's **Actions** tab → latest **build** run → download
-   **MixtapeCD-windows** and unzip it. (First time on a fork: click *Enable workflows*,
-   then **build → Run workflow**.) It includes ffmpeg, so MP3/FLAC/M4A just work.
+1. Get the app: **Releases** (right side of the repo page) → download **MixtapeCD-windows.zip**
+   and unzip it. It includes ffmpeg, so any audio file works. (Each push also builds a test copy
+   under **Actions → build → MixtapeCD-windows**.)
 2. Install [ImgBurn](https://www.imgburn.com/) (free) for the actual burning.
 3. Run **MixtapeCD.exe** and:
    - **Songs**: drag in any audio files (MP3, WAV, FLAC, M4A/AAC, ALAC, OGG, Opus, AIFF, WMA,
