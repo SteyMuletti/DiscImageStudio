@@ -24,6 +24,9 @@ public sealed partial class MainWindow : Window
     private string? _artSource; // what the user picked
     private string? _artPath;   // square, disc-centred PNG the engine uses
     private Bitmap? _artSquare;
+    private Bitmap? _discRender;                     // last to-scale render, without dimension marks
+    private CdPhysicalLayout? _discLayout;
+    private (double RadiusMm, string Label)[] _discMarks = [];
     private string? _builtCue; // .cue (audio CD) or .iso (MP3 disc) ready for ImgBurn
     private bool _building;
 
@@ -385,7 +388,17 @@ public sealed partial class MainWindow : Window
                     System.Runtime.InteropServices.Marshal.Copy(pixels, y * PreviewSize * 4,
                         frame.Address + y * frame.RowBytes, PreviewSize * 4);
             }
-            Preview.Source = bitmap;
+            _discRender = bitmap;
+            _discLayout = CdPhysicalLayout.For(disc);
+            double artInner = disc.RadiusFromByte(drawStart * CdDiscParameters.BytesPerSector);
+            double artOuter = disc.RadiusFromByte(Math.Max(drawStart, drawEnd) * CdDiscParameters.BytesPerSector);
+            _discMarks = mp3
+                ? (drawEnd < disc.OutputSectors ? [(artOuter, "songs start")] : [])
+                : (drawStart > 0 ? [(artInner, "art starts")] : []);
+            DiscCaption.Text = $"Drawn to scale for {(DiscType.SelectedItem as ComboBoxItem)?.Content}: "
+                + $"Ø120 mm disc, data Ø{2 * disc.InnerRadiusMm:0.0}–{2 * disc.OutputOuterRadiusMm:0.0} mm. "
+                + "Simulated from the real disc data; on the real disc the art shows best tilted under a light.";
+            ShowDiscRender();
         }
         catch (OperationCanceledException) { }
         catch (Exception error)
@@ -396,6 +409,17 @@ public sealed partial class MainWindow : Window
         {
             if (_previewCancel == cancel) PreviewBusy.IsVisible = false;
         }
+    }
+
+    private void OnShowDimensions(object? sender, RoutedEventArgs e) => ShowDiscRender();
+
+    private void ShowDiscRender()
+    {
+        if (_discRender is null || _discLayout is null) return;
+        bool show = ShowDimensions.IsChecked == true;
+        Preview.Source = show ? DiscDimensions.Draw(_discRender, _discLayout, _discMarks) : _discRender;
+        DimensionLegend.Text = show ? DiscDimensions.Legend : "";
+        DimensionLegend.IsVisible = show;
     }
 
     private void UpdateLayoutText(CdDiscParameters disc, long music, bool preparing)

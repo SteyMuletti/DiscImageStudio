@@ -41,7 +41,9 @@ take roughly 100 MB, a 3–4 mm band at the edge.
      black borders.
    - Watch the **preview**: your image and the burned disc side by side. On the left, dimmed areas
      won't be on the disc and blue marks where the songs go; the right redraws the burned side
-     whenever you change something. It warns if there's too much music.
+     whenever you change something, drawn to scale for the blank you picked (Ø120 mm disc, Ø15 mm
+     hole, hub, dye area, the disc's measured data area, lead-out). Tick *Show dimensions* for
+     labelled rings. It warns if there's too much music.
 4. **Build disc files**, then **Burn with ImgBurn**. ImgBurn opens with the disc (`.iso` for MP3
    discs, `mixtape.cue` for audio CDs) loaded; insert a blank, choose a slow speed and click Write.
 

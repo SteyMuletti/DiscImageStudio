@@ -107,7 +107,10 @@
         </Grid>
         <Grid Grid.Row="1" ColumnDefinitions="*,40,*" RowDefinitions="Auto,*,Auto">
           <TextBlock Text="Your image" FontWeight="SemiBold" HorizontalAlignment="Center" />
-          <TextBlock Grid.Column="2" Text="On the disc (burned side)" FontWeight="SemiBold" HorizontalAlignment="Center" />
+          <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="14">
+            <TextBlock Text="On the disc (burned side)" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <CheckBox x:Name="ShowDimensions" Content="Show dimensions" IsCheckedChanged="OnShowDimensions" />
+          </StackPanel>
           <Image Grid.Row="1" x:Name="SourceView" Stretch="Uniform" Margin="4,8" />
           <TextBlock Grid.Row="1" Grid.Column="1" Text="→" FontSize="28" Foreground="#7d849f"
                      HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -122,13 +125,14 @@
                      Text="Dimmed = not on the disc (hub and outside the circle). Blue = where the songs go." />
           <TextBlock Grid.Row="2" Grid.Column="2" FontSize="11" Foreground="#7d849f" TextWrapping="Wrap"
                      HorizontalAlignment="Center" TextAlignment="Center"
-                     Text="Simulated from the real disc data. On the real disc the art shows best tilted under a light." />
+                     x:Name="DiscCaption" />
         </Grid>
         <StackPanel Grid.Row="2" Spacing="6">
           <Grid x:Name="CapacityBar" ColumnDefinitions="0*,1*" Height="16">
             <Border x:Name="MusicBar" Background="#4a5a9e" CornerRadius="4,0,0,4" />
             <Border Grid.Column="1" x:Name="ArtBar" Background="#c9cfe6" CornerRadius="0,4,4,0" />
           </Grid>
+          <TextBlock x:Name="DimensionLegend" TextWrapping="Wrap" Foreground="#ffd666" FontSize="12" IsVisible="False" />
           <TextBlock x:Name="LayoutText" TextWrapping="Wrap" Foreground="#c8cde0" />
         </StackPanel>
       </Grid>

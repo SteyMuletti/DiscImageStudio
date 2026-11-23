@@ -2,12 +2,11 @@ using DiscImageStudio.Core;
 
 namespace DiscImageStudio.Cd;
 
-/// <summary>Draws a burned CD-R the way it looks under a lamp: AZO-blue dye, darker burned
-/// marks, a clear hub and a soft rainbow reflection.</summary>
+/// <summary>Draws a burned CD-R to scale (see <see cref="CdPhysicalLayout"/>) the way it looks
+/// under a lamp: AZO-blue dye, darker burned marks, clear hub and a soft rainbow reflection.
+/// The image spans exactly the 120 mm disc, so pixels map linearly to millimetres.</summary>
 internal static class CdDiscRenderer
 {
-    private const double DiscRadiusMm = 60.0, HoleRadiusMm = 7.5, ClearRadiusMm = 22.5;
-
     internal static byte[] Render(string sourceImage, CdDiscParameters parameters, ToneProfile tone,
         long drawStartByte, long drawEndByte, int size, CancellationToken cancellationToken)
     {
@@ -18,10 +17,10 @@ internal static class CdDiscRenderer
         double warpMmPerPixel = parameters.PreviewImageOuterRadiusMm / (warpSize / 2.0);
         double drawInner = parameters.RadiusFromByte(drawStartByte);
         double drawOuter = parameters.RadiusFromByte(Math.Min(drawEndByte, parameters.TotalBytes));
-        double dataInner = parameters.InnerRadiusMm, dataOuter = parameters.OutputOuterRadiusMm;
+        CdPhysicalLayout disc = CdPhysicalLayout.For(parameters);
 
         byte[] pixels = new byte[size * size * 4];
-        double mm = 2 * DiscRadiusMm / size;
+        double mm = 2 * disc.DiscRadiusMm / size;
         Parallel.For(0, size, new ParallelOptions { CancellationToken = cancellationToken }, y =>
         {
             for (int x = 0; x < size; x++)
@@ -29,21 +28,30 @@ internal static class CdDiscRenderer
                 double dx = (x + 0.5 - size / 2.0) * mm, dy = (y + 0.5 - size / 2.0) * mm;
                 double r = Math.Sqrt(dx * dx + dy * dy), angle = Math.Atan2(dy, dx);
                 (double R, double G, double B) c;
-                if (r > DiscRadiusMm || r < HoleRadiusMm)
+                if (r > disc.DiscRadiusMm || r < disc.CenterHoleRadiusMm)
                     c = (27, 29, 39); // background / centre hole
-                else if (r < ClearRadiusMm)
-                    c = r is > 16 and < 17.2 ? (110, 112, 120) : (90, 92, 98); // clear hub + stacking ring
-                else if (r > DiscRadiusMm - 0.6)
-                    c = (125, 130, 145); // polished rim
+                else if (r < disc.DyeInnerRadiusMm)
+                {
+                    // Clear polycarbonate hub: frosted clamping area, raised stacking ring.
+                    c = r >= disc.StackingRingInnerRadiusMm && r < disc.StackingRingOuterRadiusMm ? (118, 120, 130)
+                        : r >= disc.ClampingInnerRadiusMm && r < disc.ClampingOuterRadiusMm ? (98, 100, 108)
+                        : (84, 86, 94);
+                    c = Sheen(c, angle, r, 0.18);
+                }
+                else if (r > disc.DyeOuterRadiusMm)
+                    c = Sheen((120, 125, 140), angle, r, 0.15); // clear outer rim
                 else
                 {
                     double level; // 1 = unburned dye, 0 = fully burned
-                    if (r < dataInner) level = 1.25; // lead-in mirror band
-                    else if (r > dataOuter) level = 1.0;
-                    else if (r < drawInner || r > drawOuter) level = 0.5 + 0.07 * Math.Sin(r * 9.0); // music/file data texture
-                    else level = SampleWarp(warp, warpSize, warpMmPerPixel, dx, dy) / 255.0;
-                    c = Dye(level);
-                    c = Sheen(c, angle, r);
+                    if (r < disc.PowerCalibrationRadiusMm) level = 1.0;                 // unwritten dye
+                    else if (r < disc.LeadInRadiusMm) level = 0.75;                      // PCA/PMA test marks
+                    else if (r < disc.ProgramStartRadiusMm) level = WrittenTexture(r);   // lead-in
+                    else if (r < disc.ProgramEndRadiusMm)
+                        level = r < drawInner || r > drawOuter ? WrittenTexture(r)       // songs / files
+                            : SampleWarp(warp, warpSize, warpMmPerPixel, dx, dy) / 255.0; // the art
+                    else if (r < disc.LeadOutEndRadiusMm) level = WrittenTexture(r);     // lead-out
+                    else level = 1.0;                                                    // unwritten dye
+                    c = Sheen(Dye(level), angle, r, 0.35);
                 }
                 int o = (y * size + x) * 4;
                 pixels[o] = ToByte(c.B); pixels[o + 1] = ToByte(c.G); pixels[o + 2] = ToByte(c.R); pixels[o + 3] = 255;
@@ -51,6 +59,9 @@ internal static class CdDiscRenderer
         });
         return pixels;
     }
+
+    /// <summary>Ordinary data reads as an even mid-tone with faint track banding.</summary>
+    private static double WrittenTexture(double r) => 0.5 + 0.07 * Math.Sin(r * 9.0);
 
     private static double SampleWarp(byte[] warp, int size, double mmPerPixel, double dx, double dy)
     {
@@ -79,10 +90,11 @@ internal static class CdDiscRenderer
             burned.B + (unburned.B - burned.B) * level);
     }
 
-    private static (double, double, double) Sheen((double R, double G, double B) c, double angle, double r)
+    private static (double, double, double) Sheen((double R, double G, double B) c, double angle, double r,
+        double strength)
     {
         double hue = angle * 2 + r * 0.08;
-        double sheen = Math.Pow(Math.Cos(2 * (angle - 0.6)), 8) * 0.35;
+        double sheen = Math.Pow(Math.Cos(2 * (angle - 0.6)), 8) * strength;
         double R = c.R * (1 - sheen) + (Math.Sin(hue) * 0.5 + 0.5) * 255 * sheen;
         double G = c.G * (1 - sheen) + (Math.Sin(hue + 2.1) * 0.5 + 0.5) * 255 * sheen;
         double B = c.B * (1 - sheen) + (Math.Sin(hue + 4.2) * 0.5 + 0.5) * 255 * sheen;
