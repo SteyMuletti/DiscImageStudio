@@ -103,8 +103,9 @@ The tool refuses to build if the songs leave no room for the picture.
 
 ## The artwork
 
-- `art/money-ring.png` (default): your money-rain image, tiled smaller so whole dollar signs fit
-  the outer ring.
+- `art/money-rain.png` (default for MP3 discs): the dense money-rain pattern, made for full-disc art.
+- `art/money-ring.png` (default for audio CDs): the first money image, tiled smaller so whole dollar
+  signs fit the outer ring.
 - `art/money.png`: the original scale; the big signs get cut by the music ring.
 - Your own art: any square, high-contrast black-and-white image works best. Only the outer
   ring shows; the centre is covered by the music. Pass `-Art path\to\image.png`.

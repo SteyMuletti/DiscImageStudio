@@ -139,7 +139,7 @@ public sealed partial class MainWindow : Window
     {
         string[] builtIn = BuiltInArtFiles().ToArray();
         if (onlyIfBuiltIn && _artSource is not null && !builtIn.Contains(_artSource)) return;
-        string wanted = Mp3Mode ? "money.png" : "money-ring.png";
+        string wanted = Mp3Mode ? "money-rain.png" : "money-ring.png";
         if (builtIn.FirstOrDefault(a => Path.GetFileName(a) == wanted) is { } art) SetArt(art);
     }
 
