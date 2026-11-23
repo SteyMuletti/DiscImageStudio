@@ -189,24 +189,7 @@ public sealed class CdDiscModule : IOpticalDiscModule
         return new DiscJobResult(ModuleId, request.Command, 0, message, summary.CueSheetPath);
     }
 
-    /// <summary>Built-in measured geometry for a blank disc. "verbatim-azo" is Verbatim's AZO-dye
-    /// 80-min CD-R (DataLifePlus, including the silver inkjet printable line).</summary>
-    private static CdDiscParameters DiscPreset(string name)
-    {
-        string id = name.ToLowerInvariant() switch
-        {
-            "verbatim-azo" or "verbatim" => "verbatim-azo-43438",
-            string other => other,
-        };
-        CdDiscPresetDefinition preset = DiscPresetJsonStore.LoadBuiltIn().CdPresets
-            .FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase))
-            ?? throw new ArgumentException($"Unknown --disc '{name}'. Use verbatim-azo, cd-80 or cd-74.");
-        // The artwork spans the whole disc out to the measured edge.
-        return new CdDiscParameters(preset.InnerRadiusMm, preset.OuterRadiusMm, preset.Sectors,
-            ImageOuterRadiusMm: preset.OuterRadiusMm,
-            PitchLinear: preset.PitchLinear, PitchQuadratic: preset.PitchQuadratic, PitchCubic: preset.PitchCubic,
-            UsableSectors: CdDiscPreset.ResolveUsableSectors(preset.Sectors, preset.UsableSectors));
-    }
+    private static CdDiscParameters DiscPreset(string name) => CdMixtapeGenerator.DiscParameters(name);
 
     private static DiscJobResult PreviewWarp(
         DiscJobRequest request,

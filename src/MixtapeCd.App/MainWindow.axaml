@@ -1,0 +1,133 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:MixtapeCd.App"
+        x:Class="MixtapeCd.App.MainWindow"
+        x:DataType="local:MainWindow"
+        Title="Mixtape CD"
+        Width="1280" Height="820" MinWidth="980" MinHeight="640"
+        Background="#11121a">
+  <Grid ColumnDefinitions="440,*" RowDefinitions="*,Auto" Margin="16">
+
+    <!-- Left: songs, art, disc settings -->
+    <ScrollViewer Grid.Column="0" Grid.Row="0" Margin="0,0,16,0">
+      <StackPanel Spacing="12">
+        <Border Classes="card" DragDrop.AllowDrop="True" x:Name="SongsCard">
+          <StackPanel>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="1  ·  SONGS" Classes="h" Margin="0,0,0,8" />
+              <Button Grid.Column="1" Content="+ Add songs…" Click="OnAddSongs" />
+            </Grid>
+            <TextBlock x:Name="SongsHint" TextWrapping="Wrap" Foreground="#7d849f" Margin="0,4,0,8"
+                       Text="Drop MP3, WAV, FLAC or M4A files here, or click Add songs. They play in this order." />
+            <ItemsControl ItemsSource="{Binding Tracks}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="local:Track">
+                  <Grid ColumnDefinitions="28,*,52,Auto" Margin="0,2">
+                    <TextBlock Text="{Binding NumberText}" VerticalAlignment="Center" Foreground="#7d849f" />
+                    <StackPanel Grid.Column="1">
+                      <TextBox Text="{Binding Title}" Padding="6,3" MinHeight="28" />
+                      <TextBlock Text="{Binding Status}" FontSize="11" Foreground="#d9a441"
+                                 IsVisible="{Binding HasStatus}" Margin="2,2,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="{Binding DurationText}" VerticalAlignment="Center"
+                               HorizontalAlignment="Right" Foreground="#c8cde0" />
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="6,0,0,0" Spacing="2">
+                      <Button Content="▲" Padding="6,2" Click="OnMoveUp" Tag="{Binding}" ToolTip.Tip="Move up" />
+                      <Button Content="▼" Padding="6,2" Click="OnMoveDown" Tag="{Binding}" ToolTip.Tip="Move down" />
+                      <Button Content="✕" Padding="6,2" Click="OnRemove" Tag="{Binding}" ToolTip.Tip="Remove" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock x:Name="TotalText" Margin="0,10,0,0" FontWeight="SemiBold" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card" DragDrop.AllowDrop="True" x:Name="ArtCard">
+          <StackPanel>
+            <TextBlock Text="2  ·  DISC ART" Classes="h" Margin="0,0,0,8" />
+            <Grid ColumnDefinitions="96,*">
+              <Border Width="88" Height="88" CornerRadius="6" ClipToBounds="True" Background="#000">
+                <Image x:Name="ArtThumb" Stretch="UniformToFill" />
+              </Border>
+              <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                <TextBlock x:Name="ArtName" TextTrimming="CharacterEllipsis" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Button Content="Choose image…" Click="OnChooseArt" />
+                  <ComboBox x:Name="BuiltInArt" SelectionChanged="OnBuiltInArt" PlaceholderText="Built-in" MinWidth="120" />
+                </StackPanel>
+                <TextBlock Text="High-contrast black &amp; white works best. Only the outer ring shows."
+                           FontSize="11" Foreground="#7d849f" TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Text="3  ·  DISC" Classes="h" Margin="0,0,0,0" />
+            <TextBlock Text="Blank disc" Foreground="#9aa3c7" FontSize="12" />
+            <ComboBox x:Name="DiscType" HorizontalAlignment="Stretch" SelectionChanged="OnSettingChanged" />
+            <Grid ColumnDefinitions="*,10,*">
+              <StackPanel>
+                <TextBlock Text="Album title" Foreground="#9aa3c7" FontSize="12" />
+                <TextBox x:Name="AlbumTitle" Text="Mixtape" />
+              </StackPanel>
+              <StackPanel Grid.Column="2">
+                <TextBlock Text="Artist" Foreground="#9aa3c7" FontSize="12" />
+                <TextBox x:Name="Artist" />
+              </StackPanel>
+            </Grid>
+            <TextBlock Text="Gap between songs" Foreground="#9aa3c7" FontSize="12" />
+            <ComboBox x:Name="Gap" HorizontalAlignment="Stretch" SelectionChanged="OnSettingChanged" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- Right: live disc preview -->
+    <Border Grid.Column="1" Grid.Row="0" Classes="card">
+      <Grid RowDefinitions="Auto,*,Auto">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="PREVIEW  ·  burned side" Classes="h" Margin="0,0,0,4" />
+          <TextBlock Grid.Column="1" x:Name="PreviewBusy" Text="Rendering…" Foreground="#7d849f" IsVisible="False" />
+        </Grid>
+        <Panel Grid.Row="1">
+          <Image x:Name="Preview" Stretch="Uniform" Margin="8" />
+          <TextBlock x:Name="PreviewOverlay" HorizontalAlignment="Center" VerticalAlignment="Center"
+                     FontSize="18" FontWeight="SemiBold" Foreground="#ff7a7a" TextAlignment="Center"
+                     TextWrapping="Wrap" MaxWidth="420" IsVisible="False" />
+        </Panel>
+        <StackPanel Grid.Row="2" Spacing="6">
+          <Grid x:Name="CapacityBar" ColumnDefinitions="0*,1*" Height="16">
+            <Border x:Name="MusicBar" Background="#4a5a9e" CornerRadius="4,0,0,4" />
+            <Border Grid.Column="1" x:Name="ArtBar" Background="#c9cfe6" CornerRadius="0,4,4,0" />
+          </Grid>
+          <TextBlock x:Name="LayoutText" TextWrapping="Wrap" Foreground="#c8cde0" />
+          <TextBlock Text="Simulated from the real disc data. On the actual disc the art shows best tilted under a light."
+                     FontSize="11" Foreground="#7d849f" TextWrapping="Wrap" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Bottom: build & burn -->
+    <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="card" Margin="0,16,0,0">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto">
+        <TextBlock Text="Save to" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#9aa3c7" />
+        <TextBox Grid.Column="1" x:Name="OutputFolder" />
+        <Button Grid.Column="2" Content="…" Click="OnChooseOutput" Margin="6,0,0,0" />
+        <Button Grid.Column="3" x:Name="BuildButton" Content="Build disc files" Click="OnBuild"
+                Classes="accent" Margin="12,0,0,0" FontWeight="SemiBold" Padding="18,8" />
+        <Button Grid.Column="4" x:Name="BurnButton" Content="Burn with ImgBurn" Click="OnBurn"
+                IsEnabled="False" Margin="8,0,0,0" Padding="18,8" />
+        <Button Grid.Column="5" x:Name="OpenButton" Content="Open folder" Click="OnOpenFolder"
+                IsEnabled="False" Margin="8,0,0,0" />
+        <ProgressBar Grid.Row="2" Grid.ColumnSpan="6" x:Name="Progress" Margin="0,10,0,0" Height="6"
+                     Minimum="0" Maximum="1" IsVisible="False" />
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="6" x:Name="StatusText" Margin="0,10,0,0"
+                   Foreground="#c8cde0" TextWrapping="Wrap" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

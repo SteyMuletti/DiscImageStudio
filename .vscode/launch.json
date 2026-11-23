@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Mixtape CD app",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build app",
+      "program": "${workspaceFolder}/src/MixtapeCd.App/bin/Debug/net10.0/MixtapeCD.dll",
+      "cwd": "${workspaceFolder}",
+      "console": "internalConsole"
+    }
+  ]
+}

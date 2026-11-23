@@ -505,6 +505,15 @@ public static class CdTrackGenerator
         ToneProfile tone,
         CancellationToken cancellationToken = default)
     {
+        WritePng(Path.GetFullPath(outputPath), outputSize,
+            PreviewWarpPixels(imagePath, generated, actual, outputSize, samplesPerSector, tone, 0, cancellationToken));
+    }
+
+    /// <summary>BGRA projection of the source image onto the disc; bytes before <paramref name="firstByte"/>
+    /// are left unsampled (transparent where nothing else lands).</summary>
+    internal static byte[] PreviewWarpPixels(string imagePath, CdDiscParameters generated, CdDiscParameters actual,
+        int outputSize, int samplesPerSector, ToneProfile tone, long firstByte, CancellationToken cancellationToken)
+    {
         generated.Validate();
         actual.Validate();
         ValidatePreview(outputSize, samplesPerSector);
@@ -517,7 +526,7 @@ public static class CdTrackGenerator
         long sampleNumber = 0;
         uint packedSamples = 0;
         long packedGroup = -1;
-        for (long globalByte = 0; globalByte < totalBytes; globalByte += step)
+        for (long globalByte = firstByte - firstByte % step; globalByte < totalBytes; globalByte += step)
         {
             if ((sampleNumber & 0x3FFF) == 0)
             {
@@ -548,7 +557,7 @@ public static class CdTrackGenerator
             sampleNumber++;
         }
 
-        WritePng(Path.GetFullPath(outputPath), outputSize, preview.CreatePixels());
+        return preview.CreatePixels();
     }
 
     /// <summary>

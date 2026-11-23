@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>MixtapeCD</AssemblyName>
+    <RootNamespace>MixtapeCd.App</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.19" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.19" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.19" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.19" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MixtapeCd.Screenshot" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../DiscImageStudio.Core/DiscImageStudio.Core.csproj" />
+    <ProjectReference Include="../DiscImageStudio.ImageIO/DiscImageStudio.ImageIO.csproj" />
+    <ProjectReference Include="../DiscImageStudio.Cd/DiscImageStudio.Cd.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../art/*.png" Link="art/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+</Project>

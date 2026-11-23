@@ -4,4 +4,5 @@
   <Project Path="src/DiscImageStudio.ImageIO/DiscImageStudio.ImageIO.csproj" />
   <Project Path="src/DiscImageStudio.Cd/DiscImageStudio.Cd.csproj" />
   <Project Path="src/DiscImageStudio.Cli/DiscImageStudio.Cli.csproj" />
+  <Project Path="src/MixtapeCd.App/MixtapeCd.App.csproj" />
 </Solution>

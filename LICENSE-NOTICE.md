@@ -14,8 +14,11 @@ arduinocelentano, licensed GPL-3.0-or-later.
 
 Modifications in this fork: removed the DVD, Blu-ray, desktop app, direct-burning, calibration
 UI, tests and documentation translations; added the `cd-mixtape` command (music tracks plus
-disc art), a Verbatim AZO disc option, conversion and one-step scripts.
+disc art), a Verbatim AZO disc option, conversion and one-step scripts, and the MixtapeCD desktop
+app (src/MixtapeCd.App).
 
 If you distribute binaries of this fork, the GPL requires you to provide the matching complete
-source code. Third-party components keep their own licenses; see
+source code. The desktop app uses [Avalonia](https://github.com/AvaloniaUI/Avalonia) (MIT). The Windows app
+download bundles [FFmpeg](https://ffmpeg.org/) (GPL build; license included as FFMPEG-LICENSE.txt).
+Third-party components keep their own licenses; see
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).

@@ -9,20 +9,33 @@ inner ring as normal audio tracks, and the artwork is drawn on the outer ring by
 *Simulated readback of the real generated disc data, drawn on a blue AZO dye surface.
 Real discs show it best tilted under a light, and more subtly than this render.*
 
-## Quick start (Windows)
+## The app (Windows)
 
-1. Install [ffmpeg](https://www.gyan.dev/ffmpeg/builds/) and [ImgBurn](https://www.imgburn.com/).
-2. Get `mixtape-cd.exe`: open this repo's **Actions** tab → latest **build** run →
-   download **mixtape-cd-win-x64** and unzip it. (Or build it: see below.)
-3. Put your songs in a folder, named so they sort in order: `01 - Intro.mp3`, `02 - ...`.
-4. In PowerShell, in the unzipped folder:
-   ```powershell
-   .\make-mixtape.ps1 -Songs "D:\Mixtape\songs" -Title "My Mixtape" -Artist "Me"
-   ```
-5. Open `disc\mixtape-preview.png` to check the layout (blue = music, image = art ring).
-6. ImgBurn → **Write image file to disc** → open `disc\mixtape.cue` → burn.
+![Mixtape CD app: songs on the left, live preview of the burned disc on the right](docs/images/app.png)
 
-macOS/Linux: `./make-mixtape.sh ./songs` (same steps; burn with `cdrdao write disc/mixtape.cue`).
+1. Get the app: open this repo's **Actions** tab → latest **build** run → download
+   **MixtapeCD-windows** and unzip it. (First time on a fork: click *Enable workflows*,
+   then **build → Run workflow**.) It includes ffmpeg, so MP3/FLAC/M4A just work.
+2. Install [ImgBurn](https://www.imgburn.com/) (free) for the actual burning.
+3. Run **MixtapeCD.exe** and:
+   - **Songs**: drag your tracks in (or *Add songs…*), fix titles, reorder with ▲▼.
+   - **Disc art**: the money art is preselected; *Choose image…* to use another.
+   - **Disc**: Verbatim AZO is preselected for your Verbatim Silver Inkjet Printable CD-Rs.
+   - Watch the **preview**: it redraws the burned side whenever you change something,
+     and shows how much room the art has. It warns if there's too much music.
+4. **Build disc files**, then **Burn with ImgBurn**. ImgBurn opens with the disc loaded;
+   insert a blank, choose a slow speed and click Write.
+
+Windows may show a SmartScreen warning the first time because the app isn't signed:
+*More info → Run anyway*.
+
+### Command line instead
+
+```powershell
+.\make-mixtape.ps1 -Songs "D:\Mixtape\songs" -Title "My Mixtape" -Artist "Me"
+```
+(from the **mixtape-cd-cli-win-x64** download; needs ffmpeg on PATH).
+macOS/Linux: `./make-mixtape.sh ./songs`, burn with `cdrdao write disc/mixtape.cue`.
 
 ## What fits
 
@@ -67,6 +80,7 @@ compare test burns. More detail in [docs/MIXTAPE.md](docs/MIXTAPE.md).
 ## Build from source
 
 ```sh
+dotnet run --project src/MixtapeCd.App            # the app
 dotnet publish src/DiscImageStudio.Cli -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o out
 ```
 
@@ -74,6 +88,6 @@ Needs the .NET 10 SDK. Commands: `mixtape-cd --help`, `mixtape-cd cd-mixtape --h
 
 ## Credits and license
 
-A stripped-down fork of [Disc Image Studio](https://github.com/JiaFeiMiao-K-Cat/DiscImageStudio)
+A stripped-down fork (plus a new desktop app built with [Avalonia](https://avaloniaui.net/)) of [Disc Image Studio](https://github.com/JiaFeiMiao-K-Cat/DiscImageStudio)
 by JiaFeiMiao-K-Cat and contributors, which does the actual disc-surface imaging. Licensed
 GPL-3.0-or-later; see [LICENSE](LICENSE) and [LICENSE-NOTICE.md](LICENSE-NOTICE.md).

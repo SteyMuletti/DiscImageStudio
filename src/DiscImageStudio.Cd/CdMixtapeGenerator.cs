@@ -17,9 +17,19 @@ public sealed record CdMixtapeRequest(
     double GapSeconds = 0,
     string AlbumTitle = "Mixtape",
     string Performer = "",
-    string PictureTrackTitle = "Disc Art (noise - do not play)");
+    string PictureTrackTitle = "Disc Art (noise - do not play)")
+{
+    /// <summary>Explicit song order and titles; when set, <see cref="MusicDirectory"/> is ignored.</summary>
+    public IReadOnlyList<CdMixtapeSong>? Songs { get; init; }
+}
 
-public sealed record CdMixtapeTrack(int Number, string SourcePath, string OutputPath, long Sectors);
+/// <summary>One CD-ready WAV (44.1 kHz/16-bit/stereo PCM) and the title shown in players.</summary>
+public sealed record CdMixtapeSong(string WavPath, string Title);
+
+public sealed record CdMixtapeTrack(int Number, string SourcePath, string OutputPath, long Sectors)
+{
+    public string Title { get; init; } = Path.GetFileNameWithoutExtension(SourcePath);
+}
 
 public sealed record CdMixtapeSummary(
     IReadOnlyList<CdMixtapeTrack> MusicTracks,
@@ -82,7 +92,11 @@ public static class CdMixtapeGenerator
         if (!double.IsFinite(request.GapSeconds) || request.GapSeconds is < 0 or > 10)
             throw new ArgumentOutOfRangeException(nameof(request), "--gap must be 0..10 seconds.");
 
-        IReadOnlyList<string> music = ListMusic(request.MusicDirectory);
+        IReadOnlyList<CdMixtapeSong> songs = request.Songs
+            ?? ListMusic(request.MusicDirectory).Select(f => new CdMixtapeSong(f, SongTitle(f))).ToArray();
+        if (songs.Count is 0 or > 98)
+            throw new InvalidDataException("A mixtape needs 1 to 98 songs (the picture takes the last track).");
+        IReadOnlyList<string> music = songs.Select(song => song.WavPath).ToArray();
         long[] musicSectors = MeasureMusic(music, request.GapSeconds);
         long totalMusic = musicSectors.Sum();
         long pictureSectors = parameters.OutputSectors - totalMusic;
@@ -104,12 +118,12 @@ public static class CdMixtapeGenerator
         {
             cancellationToken.ThrowIfCancellationRequested();
             int number = i + 1;
-            string name = $"{number:00} - {SafeName(SongTitle(music[i]))}.wav";
+            string name = $"{number:00} - {SafeName(songs[i].Title)}.wav";
             string output = Path.Combine(outputDirectory, name);
             if (Path.GetFullPath(output).Equals(Path.GetFullPath(music[i]), StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("The output folder must differ from the music folder.");
             WriteMusicTrack(music[i], output, musicSectors[i] * CdDiscParameters.BytesPerSector);
-            tracks.Add(new CdMixtapeTrack(number, music[i], output, musicSectors[i]));
+            tracks.Add(new CdMixtapeTrack(number, music[i], output, musicSectors[i]) { Title = songs[i].Title });
         }
 
         int pictureNumber = music.Count + 1;
@@ -136,6 +150,45 @@ public static class CdMixtapeGenerator
         return new CdMixtapeSummary(tracks, picturePath, pictureSectors, totalMusic, musicOuter, pictureOuter,
             cuePath, previewPath);
     }
+
+    /// <summary>Blank disc choices for <see cref="DiscParameters"/>.</summary>
+    public static IReadOnlyList<(string Id, string Name)> DiscTypes { get; } =
+    [
+        ("verbatim-azo", "Verbatim AZO CD-R 80 min (DataLifePlus / Silver Inkjet Printable)"),
+        ("cd-80", "Generic CD-R 80 min"),
+        ("cd-74", "Generic CD-R 74 min"),
+    ];
+
+    /// <summary>Measured geometry for a blank disc. "verbatim-azo" is Verbatim's AZO-dye 80-min
+    /// CD-R (DataLifePlus, including the silver inkjet printable line).</summary>
+    public static CdDiscParameters DiscParameters(string disc)
+    {
+        string id = disc.ToLowerInvariant() switch
+        {
+            "verbatim-azo" or "verbatim" => "verbatim-azo-43438",
+            string other => other,
+        };
+        CdDiscPresetDefinition preset = DiscPresetJsonStore.LoadBuiltIn().CdPresets
+            .FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase))
+            ?? throw new ArgumentException($"Unknown disc '{disc}'. Use verbatim-azo, cd-80 or cd-74.");
+        // The artwork spans the whole disc out to the measured edge.
+        return new CdDiscParameters(preset.InnerRadiusMm, preset.OuterRadiusMm, preset.Sectors,
+            ImageOuterRadiusMm: preset.OuterRadiusMm,
+            PitchLinear: preset.PitchLinear, PitchQuadratic: preset.PitchQuadratic, PitchCubic: preset.PitchCubic,
+            UsableSectors: CdDiscPreset.ResolveUsableSectors(preset.Sectors, preset.UsableSectors));
+    }
+
+    /// <summary>Exact on-disc length of one song (sector padding, 4 s minimum and gap included).</summary>
+    public static long SongSectors(string wavPath, double gapSeconds) => MeasureMusic([wavPath], gapSeconds)[0];
+
+    /// <summary>
+    /// Photo-style render of the burned side (BGRA, opaque, size×size). The art ring uses the same
+    /// byte→disc projection as generation; the music ring shows plain audio texture.
+    /// </summary>
+    public static byte[] RenderDiscPreview(string sourceImage, CdDiscParameters parameters, ToneProfile tone,
+        long musicSectors, int size, CancellationToken cancellationToken = default)
+        => CdDiscRenderer.Render(sourceImage, parameters, tone.Normalized(),
+            Math.Clamp(musicSectors, 0, parameters.OutputSectors) * CdDiscParameters.BytesPerSector, size, cancellationToken);
 
     /// <summary>Radius (mm) where the music ends and the picture begins.</summary>
     public static double PictureStartRadiusMm(CdDiscParameters parameters, long musicSectors)
@@ -214,7 +267,7 @@ public static class CdMixtapeGenerator
         {
             cue.Append($"FILE \"{Path.GetFileName(track.OutputPath)}\" WAVE\r\n");
             cue.Append($"  TRACK {track.Number:00} AUDIO\r\n");
-            cue.Append($"    TITLE \"{CueText(SongTitle(track.SourcePath))}\"\r\n");
+            cue.Append($"    TITLE \"{CueText(track.Title)}\"\r\n");
             cue.Append("    INDEX 01 00:00:00\r\n");
         }
         cue.Append($"FILE \"{Path.GetFileName(picturePath)}\" WAVE\r\n");
@@ -268,7 +321,7 @@ public static class CdMixtapeGenerator
     }
 
     /// <summary>"01 - Song.wav" → "Song": the ordering prefix is only for sorting.</summary>
-    private static string SongTitle(string path)
+    public static string SongTitle(string path)
     {
         string name = Path.GetFileNameWithoutExtension(path);
         string trimmed = System.Text.RegularExpressions.Regex.Replace(name, @"^\s*\d{1,3}\s*[-_.)]*\s*", "");
