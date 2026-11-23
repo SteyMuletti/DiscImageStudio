@@ -21,7 +21,9 @@ public sealed partial class MainWindow : Window
 
     private CancellationTokenSource? _debounce;
     private CancellationTokenSource? _previewCancel;
-    private string? _artPath;
+    private string? _artSource; // what the user picked
+    private string? _artPath;   // square, disc-centred PNG the engine uses
+    private Bitmap? _artSquare;
     private string? _builtCue; // .cue (audio CD) or .iso (MP3 disc) ready for ImgBurn
     private bool _building;
 
@@ -32,6 +34,9 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         DataContext = this;
 
+        ArtFit.Items.Add(new ComboBoxItem { Content = "Fill the disc (crop the edges)", Tag = false });
+        ArtFit.Items.Add(new ComboBoxItem { Content = "Show the whole image (black borders)", Tag = true });
+        ArtFit.SelectedIndex = 0;
         DiscMode.Items.Add(new ComboBoxItem { Content = "MP3 disc: art covers the whole disc", Tag = true });
         DiscMode.Items.Add(new ComboBoxItem { Content = "Audio CD: art on the outer ring only", Tag = false });
         DiscMode.SelectedIndex = 0;
@@ -133,7 +138,7 @@ public sealed partial class MainWindow : Window
     private void SetDefaultArt(bool onlyIfBuiltIn = false)
     {
         string[] builtIn = BuiltInArtFiles().ToArray();
-        if (onlyIfBuiltIn && _artPath is not null && !builtIn.Contains(_artPath)) return;
+        if (onlyIfBuiltIn && _artSource is not null && !builtIn.Contains(_artSource)) return;
         string wanted = Mp3Mode ? "money.png" : "money-ring.png";
         if (builtIn.FirstOrDefault(a => Path.GetFileName(a) == wanted) is { } art) SetArt(art);
     }
@@ -259,17 +264,35 @@ public sealed partial class MainWindow : Window
 
     internal void SetArt(string path)
     {
+        _artSource = path;
+        ArtName.Text = Path.GetFileName(path);
+        PrepareArt();
+    }
+
+    private void OnArtFitChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (IsInitialized && _artSource is not null) PrepareArt();
+    }
+
+    private void PrepareArt()
+    {
+        if (_artSource is null) return;
         try
         {
-            using FileStream stream = File.OpenRead(path);
-            ArtThumb.Source = Bitmap.DecodeToWidth(stream, 176);
+            bool fit = ArtFit.SelectedItem is ComboBoxItem { Tag: true };
+            (string path, Bitmap square) = ArtPrep.PrepareSquare(_artSource, fit);
+            _artPath = path;
+            _artSquare = square;
+            ArtThumb.Source = square;
         }
-        catch (Exception)
+        catch (Exception error)
         {
-            ArtThumb.Source = null; // the engine may still read formats the thumbnail can't
+            _artPath = null;
+            _artSquare = null;
+            ArtThumb.Source = null;
+            SourceView.Source = null;
+            StatusText.Text = $"Can't read that image ({error.Message}). Try a PNG or JPEG.";
         }
-        _artPath = path;
-        ArtName.Text = Path.GetFileName(path);
         InvalidateBuild();
         SchedulePreview();
     }
@@ -338,7 +361,14 @@ public sealed partial class MainWindow : Window
             drawEnd = disc.OutputSectors;
             UpdateLayoutText(disc, music, preparing);
         }
-        if (_artPath is null) return;
+        if (_artPath is null || _artSquare is null) return;
+
+        // Left: the user's image with the parts that won't be on the disc dimmed.
+        double outer = disc.SamplingImageOuterRadiusMm;
+        SourceView.Source = ArtPrep.RenderSourceView(_artSquare, 640,
+            disc.InnerRadiusMm / outer,
+            disc.RadiusFromByte(drawStart * CdDiscParameters.BytesPerSector) / outer,
+            disc.RadiusFromByte(Math.Max(drawStart, drawEnd) * CdDiscParameters.BytesPerSector) / outer);
 
         PreviewBusy.IsVisible = true;
         try

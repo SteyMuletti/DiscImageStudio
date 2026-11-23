@@ -4,7 +4,7 @@
         x:Class="MixtapeCd.App.MainWindow"
         x:DataType="local:MainWindow"
         Title="Mixtape CD"
-        Width="1280" Height="820" MinWidth="980" MinHeight="640"
+        Width="1440" Height="860" MinWidth="1100" MinHeight="640"
         Background="#11121a">
   <Grid ColumnDefinitions="440,*" RowDefinitions="*,Auto" Margin="16">
 
@@ -87,7 +87,8 @@
                   <Button Content="Choose image…" Click="OnChooseArt" />
                   <ComboBox x:Name="BuiltInArt" SelectionChanged="OnBuiltInArt" PlaceholderText="Built-in" MinWidth="120" />
                 </StackPanel>
-                <TextBlock Text="High-contrast black &amp; white works best. Only the outer ring shows."
+                <ComboBox x:Name="ArtFit" HorizontalAlignment="Stretch" SelectionChanged="OnArtFitChanged" />
+                <TextBlock Text="High-contrast black &amp; white works best. PNG, JPEG, WebP, BMP or GIF."
                            FontSize="11" Foreground="#7d849f" TextWrapping="Wrap" />
               </StackPanel>
             </Grid>
@@ -101,23 +102,34 @@
     <Border Grid.Column="1" Grid.Row="0" Classes="card">
       <Grid RowDefinitions="Auto,*,Auto">
         <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Text="PREVIEW  ·  burned side" Classes="h" Margin="0,0,0,4" />
+          <TextBlock Text="PREVIEW" Classes="h" Margin="0,0,0,4" />
           <TextBlock Grid.Column="1" x:Name="PreviewBusy" Text="Rendering…" Foreground="#7d849f" IsVisible="False" />
         </Grid>
-        <Panel Grid.Row="1">
-          <Image x:Name="Preview" Stretch="Uniform" Margin="8" />
-          <TextBlock x:Name="PreviewOverlay" HorizontalAlignment="Center" VerticalAlignment="Center"
-                     FontSize="18" FontWeight="SemiBold" Foreground="#ff7a7a" TextAlignment="Center"
-                     TextWrapping="Wrap" MaxWidth="420" IsVisible="False" />
-        </Panel>
+        <Grid Grid.Row="1" ColumnDefinitions="*,40,*" RowDefinitions="Auto,*,Auto">
+          <TextBlock Text="Your image" FontWeight="SemiBold" HorizontalAlignment="Center" />
+          <TextBlock Grid.Column="2" Text="On the disc (burned side)" FontWeight="SemiBold" HorizontalAlignment="Center" />
+          <Image Grid.Row="1" x:Name="SourceView" Stretch="Uniform" Margin="4,8" />
+          <TextBlock Grid.Row="1" Grid.Column="1" Text="→" FontSize="28" Foreground="#7d849f"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+          <Panel Grid.Row="1" Grid.Column="2">
+            <Image x:Name="Preview" Stretch="Uniform" Margin="4,8" />
+            <TextBlock x:Name="PreviewOverlay" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       FontSize="18" FontWeight="SemiBold" Foreground="#ff7a7a" TextAlignment="Center"
+                       TextWrapping="Wrap" MaxWidth="340" IsVisible="False" />
+          </Panel>
+          <TextBlock Grid.Row="2" x:Name="SourceLegend" FontSize="11" Foreground="#7d849f" TextWrapping="Wrap"
+                     HorizontalAlignment="Center" TextAlignment="Center"
+                     Text="Dimmed = not on the disc (hub and outside the circle). Blue = where the songs go." />
+          <TextBlock Grid.Row="2" Grid.Column="2" FontSize="11" Foreground="#7d849f" TextWrapping="Wrap"
+                     HorizontalAlignment="Center" TextAlignment="Center"
+                     Text="Simulated from the real disc data. On the real disc the art shows best tilted under a light." />
+        </Grid>
         <StackPanel Grid.Row="2" Spacing="6">
           <Grid x:Name="CapacityBar" ColumnDefinitions="0*,1*" Height="16">
             <Border x:Name="MusicBar" Background="#4a5a9e" CornerRadius="4,0,0,4" />
             <Border Grid.Column="1" x:Name="ArtBar" Background="#c9cfe6" CornerRadius="0,4,4,0" />
           </Grid>
           <TextBlock x:Name="LayoutText" TextWrapping="Wrap" Foreground="#c8cde0" />
-          <TextBlock Text="Simulated from the real disc data. On the actual disc the art shows best tilted under a light."
-                     FontSize="11" Foreground="#7d849f" TextWrapping="Wrap" />
         </StackPanel>
       </Grid>
     </Border>

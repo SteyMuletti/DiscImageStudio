@@ -36,9 +36,12 @@ take roughly 100 MB, a 3–4 mm band at the edge.
      them and reorder with ▲▼.
    - **Disc**: *MP3 disc* and Verbatim AZO are preselected. Switch to *Audio CD* if it must play
      in old CD-only players.
-   - **Disc art**: the money art is preselected; *Choose image…* to use another.
-   - Watch the **preview**: it redraws the burned side whenever you change something,
-     and shows how much room the art has. It warns if there's too much music.
+   - **Disc art**: the money art is preselected; *Choose image…* to use your own (PNG, JPEG,
+     WebP, BMP, GIF; any shape). *Fill the disc* crops it to a square, *Show the whole image* adds
+     black borders.
+   - Watch the **preview**: your image and the burned disc side by side. On the left, dimmed areas
+     won't be on the disc and blue marks where the songs go; the right redraws the burned side
+     whenever you change something. It warns if there's too much music.
 4. **Build disc files**, then **Burn with ImgBurn**. ImgBurn opens with the disc (`.iso` for MP3
    discs, `mixtape.cue` for audio CDs) loaded; insert a blank, choose a slow speed and click Write.
 
