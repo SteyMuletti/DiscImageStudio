@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/DiscImageStudio.Iso/DiscImageStudio.Iso.csproj" />
+  <Project Path="src/DiscImageStudio.Core/DiscImageStudio.Core.csproj" />
+  <Project Path="src/DiscImageStudio.ImageIO/DiscImageStudio.ImageIO.csproj" />
+  <Project Path="src/DiscImageStudio.Cd/DiscImageStudio.Cd.csproj" />
+  <Project Path="src/DiscImageStudio.Cli/DiscImageStudio.Cli.csproj" />
+</Solution>

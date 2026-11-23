@@ -77,6 +77,8 @@ public sealed class CdDiscModule : IOpticalDiscModule
                     new("music-dir", "Folder of 44.1 kHz 16-bit stereo WAV songs, burned in file-name order", DiscOptionValueType.InputFolder, Required: true),
                     new("output-dir", "Folder for the track WAVs, mixtape.cue and preview", DiscOptionValueType.String, Required: true),
                     new("gap", "Silence after each song", DiscOptionValueType.Decimal, DefaultValue: "0", Unit: "seconds"),
+                    new("disc", "Blank disc type (sets geometry; r0/r1/sectors override it)", DiscOptionValueType.Choice, DefaultValue: "verbatim-azo",
+                        Choices: ["verbatim-azo", "cd-80", "cd-74"]),
                     new("title", "Album title (CUE/CD-Text)", DiscOptionValueType.String, DefaultValue: "Mixtape"),
                     new("performer", "Album artist (CUE/CD-Text)", DiscOptionValueType.String, DefaultValue: ""),
                     .. GeometryOptions,
@@ -168,7 +170,7 @@ public sealed class CdDiscModule : IOpticalDiscModule
             options.Require("input"),
             options.Require("music-dir"),
             options.Require("output-dir"),
-            ReadParameters(options),
+            ReadParameters(options, DiscPreset(options.GetString("disc", "verbatim-azo"))),
             ReadTone(options),
             options.GetBoolean("interleave", true),
             options.GetDouble("gap", 0),
@@ -185,6 +187,25 @@ public sealed class CdDiscModule : IOpticalDiscModule
             + $"Artwork visible from {summary.MusicOuterRadiusMm:F1} mm to {summary.PictureOuterRadiusMm:F1} mm. "
             + $"cue={summary.CueSheetPath}, preview={summary.PreviewPath}";
         return new DiscJobResult(ModuleId, request.Command, 0, message, summary.CueSheetPath);
+    }
+
+    /// <summary>Built-in measured geometry for a blank disc. "verbatim-azo" is Verbatim's AZO-dye
+    /// 80-min CD-R (DataLifePlus, including the silver inkjet printable line).</summary>
+    private static CdDiscParameters DiscPreset(string name)
+    {
+        string id = name.ToLowerInvariant() switch
+        {
+            "verbatim-azo" or "verbatim" => "verbatim-azo-43438",
+            string other => other,
+        };
+        CdDiscPresetDefinition preset = DiscPresetJsonStore.LoadBuiltIn().CdPresets
+            .FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase))
+            ?? throw new ArgumentException($"Unknown --disc '{name}'. Use verbatim-azo, cd-80 or cd-74.");
+        // The artwork spans the whole disc out to the measured edge.
+        return new CdDiscParameters(preset.InnerRadiusMm, preset.OuterRadiusMm, preset.Sectors,
+            ImageOuterRadiusMm: preset.OuterRadiusMm,
+            PitchLinear: preset.PitchLinear, PitchQuadratic: preset.PitchQuadratic, PitchCubic: preset.PitchCubic,
+            UsableSectors: CdDiscPreset.ResolveUsableSectors(preset.Sectors, preset.UsableSectors));
     }
 
     private static DiscJobResult PreviewWarp(

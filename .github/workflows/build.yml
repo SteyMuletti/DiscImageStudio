@@ -1,159 +1,25 @@
 name: build
-
 on:
   push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
-  workflow_call:
-    inputs:
-      ref:
-        description: Exact commit to validate for a release
-        required: false
-        type: string
-      release_tag:
-        description: Upload the tested desktop and CLI packages for this release
-        required: false
-        type: string
-
-permissions:
-  contents: read
-
 jobs:
-  cli:
+  build:
     strategy:
-      fail-fast: false
       matrix:
-        include:
-          - { runner: ubuntu-24.04, rid: linux-x64 }
-          - { runner: ubuntu-24.04-arm, rid: linux-arm64 }
-          - { runner: macos-15-intel, rid: osx-x64 }
-          - { runner: macos-15, rid: osx-arm64 }
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
-    env:
-      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
-      DOTNET_NOLOGO: '1'
-      RID: ${{ matrix.rid }}
-      PACKAGE_TAG: ${{ inputs.release_tag || 'ci' }}
+        rid: [win-x64, osx-arm64, linux-x64]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.sha }}
-          persist-credentials: false
-
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
-
-      - name: Publish and archive the self-contained CLI
-        shell: bash
+          global-json-file: global.json
+      - name: Publish single-file mixtape-cd (${{ matrix.rid }})
         run: |
-          archive="DiscImageStudio-CLI-$PACKAGE_TAG-$RID.tar.gz"
-          dotnet publish src/DiscImageStudio.Cli/DiscImageStudio.Cli.csproj \
-            -c Release -r "$RID" --self-contained true -o "$RUNNER_TEMP/publish" \
-            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
-          mkdir -p artifacts/cli
-          tar -czf "artifacts/cli/$archive" -C "$RUNNER_TEMP/publish" disc-image-studio \
-            -C "$GITHUB_WORKSPACE" LICENSE THIRD-PARTY-NOTICES.txt
-          (cd artifacts/cli && shasum -a 256 "$archive" > "$archive.sha256")
-
-      - name: Test the extracted CLI on the target platform
-        shell: bash
-        run: |
-          mkdir "$RUNNER_TEMP/cli-smoke"
-          tar -xzf "artifacts/cli/DiscImageStudio-CLI-$PACKAGE_TAG-$RID.tar.gz" -C "$RUNNER_TEMP/cli-smoke"
-          python3 tests/test_cli_package.py "$RUNNER_TEMP/cli-smoke/disc-image-studio"
-
-      - uses: actions/upload-artifact@v4
-        if: inputs.release_tag != ''
-        with:
-          name: cli-${{ inputs.release_tag }}-${{ matrix.rid }}
-          path: artifacts/cli/
-          compression-level: 0
-          if-no-files-found: error
-          retention-days: 14
-
-  windows:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { runner: windows-latest, rid: win-x64 }
-          - { runner: windows-11-arm, rid: win-arm64 }
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
-    defaults:
-      run:
-        shell: pwsh
-    env:
-      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-      DOTNET_NOLOGO: "1"
-      RID: ${{ matrix.rid }}
-      RELEASE_TAG: ${{ inputs.release_tag }}
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.sha }}
-          persist-credentials: false
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Restore
-        run: dotnet restore DiscImageStudio.slnx
-
-      - name: Validate release tooling
-        run: ./tests/Test-ReleaseTooling.ps1
-
-      - name: Validate Windows package architecture and CET checks
-        run: ./tests/Test-WindowsRelease.ps1
-
-      - name: Build
-        run: dotnet build DiscImageStudio.slnx --configuration Release --no-restore
-
-      - name: Test module architecture
-        run: dotnet run --project tests/DiscImageStudio.ArchitectureTests --configuration Release --no-build
-
-      - name: Test original DVD engine
-        run: dotnet run --project src/DvdImageSolver --configuration Release --no-build -- selftest
-
-      - name: Test DVD through module catalog
-        run: dotnet run --project src/DiscImageStudio.App --configuration Release --no-build -- selftest
-
-      - name: Smoke-test CD module
-        run: |
-          New-Item -ItemType Directory -Path artifacts\ci -Force | Out-Null
-          dotnet run --project src/DiscImageStudio.App --configuration Release --no-build -- cd-generate --input src/DiscImageStudio.App/Assets/DiscImageStudio-256.png --output artifacts/ci/cd-smoke.raw --r0 24.5 --r1 24.6 --sectors 2 --velocity 1100 --theta0 0 --outer 57.5 --interleave true
-          if ($LASTEXITCODE -ne 0) { throw "CD smoke generation failed." }
-          if ((Get-Item artifacts\ci\cd-smoke.raw).Length -ne 4704) {
-            throw "CD smoke output was not exactly two 2352-byte sectors."
-          }
-
-      - name: Render GUI screenshot
-        run: dotnet run --project src/DiscImageStudio.App --configuration Release --no-build -- ui-snapshot --output artifacts/store/home-screen.png
-
-      - name: Build and test the standalone desktop package on its native architecture
-        run: |
-          $parameters = @{ RuntimeIdentifier = $env:RID }
-          if ($env:RELEASE_TAG) { $parameters.Tag = $env:RELEASE_TAG }
-          ./packaging/Build-Release.ps1 @parameters
-
+          dotnet publish src/DiscImageStudio.Cli -c Release -r ${{ matrix.rid }} --self-contained \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o out
+          cp -r art tools make-mixtape.ps1 make-mixtape.sh README.md LICENSE LICENSE-NOTICE.md THIRD-PARTY-NOTICES.txt out/
+          rm -f out/*.pdb
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-${{ inputs.release_tag || 'ci' }}-${{ matrix.rid }}
-          path: |
-            artifacts/release/*/${{ matrix.rid }}/*.exe
-            artifacts/release/*/${{ matrix.rid }}/*.exe.sha256
-          compression-level: 0
-          if-no-files-found: error
-          retention-days: 14
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: validation-artifacts-${{ matrix.rid }}
-          path: |
-            artifacts/ci/cd-smoke.raw
-            artifacts/store/home-screen.png
+          name: mixtape-cd-${{ matrix.rid }}
+          path: out

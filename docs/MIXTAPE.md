@@ -16,19 +16,10 @@ and draws your image on the **outer ring** with a final "disc art" track.
    the drive's encoder runs continuously across track boundaries, so the outer ring is
    physically identical to a picture-only disc.
 
-The trade-off is area: **more music = thinner picture ring.** Approximate on an 80-min CD-R
-(default geometry 24.5–56.8 mm):
+The trade-off is area: **more music = thinner picture ring.** See the table in the README.
+The preview PNG shows the exact split for your songs.
 
-| Music length | Artwork visible from | 
-| --- | --- |
-| 20 min | ~35 mm |
-| 30 min | ~40 mm |
-| 40 min | ~44 mm |
-| 50 min | ~47 mm |
-| 60 min | ~51 mm |
-
-The preview PNG shows the exact split for your songs. Put the important parts of your art
-in the outer ring.
+![Layout for a 12-track, 43-minute mixtape: music in blue, art on the outer ring](images/layout-12-tracks.png)
 
 ## Steps
 
@@ -37,8 +28,8 @@ in the outer ring.
 tools/mixtape/convert-to-cd-wav.sh ./songs ./songs-wav
 
 # 2. Build the disc (same geometry/tone options as cd-generate, use your calibrated values)
-disc-image-studio cd-mixtape --input art.png --music-dir ./songs-wav --output-dir ./disc \
-  --title "My Mixtape" --performer "Me" --tone-dither 0.75
+mixtape-cd cd-mixtape --input art.png --music-dir ./songs-wav --output-dir ./disc \
+  --disc verbatim-azo --title "My Mixtape" --performer "Me" --tone-dither 0.75
 
 # 3. Check ./disc/mixtape-preview.png (blue = music ring), then burn ./disc/mixtape.cue
 ```
@@ -57,4 +48,7 @@ Burning:
   "Disc Art (noise - do not play)". Turn the volume down if you skip to it.
 - `--gap 2` adds 2 s of silence after each song (shrinks the picture slightly).
 - Car/home players read it like any audio CD; ripping software will see N+1 tracks.
-- Calibrate your disc brand first (see CALIBRATION.en.md) for sharp, straight artwork.
+- `--disc` picks the blank's measured geometry: `verbatim-azo` (default; Verbatim DataLifePlus AZO,
+  including Silver Inkjet Printable), `cd-80` or `cd-74` (generic). `--r0/--r1/--sectors` override it.
+- If the art comes out twisted, your batch's radii differ slightly: adjust `--r0`/`--r1` in
+  0.1 mm steps and re-test. The original project has a full calibration workflow.
